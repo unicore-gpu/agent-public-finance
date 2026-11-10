@@ -54,8 +54,8 @@ contract EndToEndTest is Test {
     function _runTask(uint256 reward) internal returns (uint256 id) {
         vm.startPrank(client);
         usdc.approve(address(escrow), reward);
-        id = escrow.createTask(address(usdc), reward);
-        escrow.pay(id, worker);
+        id = escrow.createTask(address(usdc), reward, worker);
+        escrow.pay(id);
         vm.stopPrank();
     }
 
@@ -95,7 +95,7 @@ contract EndToEndTest is Test {
         vm.startPrank(client);
         usdc.approve(address(e), 1_000 * U);
         vm.expectRevert("Deductions: tax above cap");
-        e.createTask(address(usdc), 1_000 * U);
+        e.createTask(address(usdc), 1_000 * U, worker);
         vm.stopPrank();
     }
 
@@ -105,8 +105,8 @@ contract EndToEndTest is Test {
         vm.warp(block.timestamp + 7 days);
         vm.deal(client, 10 ether);
         vm.startPrank(client);
-        uint256 id = escrow.createTask{value: 10 ether}(address(0), 10 ether);
-        escrow.pay(id, worker);
+        uint256 id = escrow.createTask{value: 10 ether}(address(0), 10 ether, worker);
+        escrow.pay(id);
         vm.stopPrank();
         assertEq(worker.balance, 9.8 ether);
         policy.claim(id, address(treasury));
