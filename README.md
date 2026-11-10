@@ -33,6 +33,8 @@ The specification is in [ERC-draft.md](ERC-draft.md). Status: **Draft**, not yet
 | `src/interfaces/IPublicTreasury.sol` | The treasury interface |
 | `src/TaxSchedule.sol` | Reference tax schedule: rates per asset, notice, ceiling |
 | `src/PublicTreasury.sol` | Reference treasury: grants, programs, notice, full funding, recipient cap |
+| `src/BallotMeter.sol` | A program meter that pays one unit per ballot cast on a final ERC-8436 collective decision of one policy and consumer, such as a judges' council; anyone can report, each ballot counts once |
+| `src/interfaces/ICollectiveDecisionReads.sol` | The three ERC-8436 registry reads the meter makes |
 | `test/` | Foundry unit, fuzz and invariant tests: every requirement of the specification, the worked examples, odd tokens, recipients that refuse payment, re-entry, two assets, and end-to-end runs in which a settlement deduction policy collects the tax and a program pays a judge per case |
 
 ## Build and test
