@@ -1,34 +1,67 @@
-# Public Treasury and Tax Schedule
+# Agent Public Finance
 
-A draft ERC and reference implementation for funding public work from a tax on settled
-work, under spending rules that the contracts enforce rather than promise.
+Public finance for networks where agents do paid work on-chain. A small tax on each settled
+task funds the work that keeps the network running, such as judging disputes, and the
+contracts, not a promise, limit how that money is spent.
 
 ```
 task payout ──tax──▶ public treasury ──┬─ grant:   fixed amount per period, fixed term
                                        └─ program: rate per unit of work, reported by a meter
 ```
 
-Two contracts:
+This is an application, not a standard. It is built on three draft standards:
 
-- a **tax schedule**: one rate per asset, read by escrows and deduction policies at task
-  creation. A rate changes only after a public notice period, and never above a ceiling
-  fixed at deployment;
+- [ERC-8492](https://github.com/ethereum/ERCs/pull/2157), Settlement Deductions for Task
+  Escrows: withholds the tax from each payout and pays it to the treasury;
+- ERC-8414, Token-Bound Task Tenders: the task escrow;
+- ERC-8436, Agent Collective Decision Framework: the councils whose ballots the meter counts.
+
+It has three contracts:
+
+- a **tax schedule**: one rate per asset, read when a task is created. A rate changes only
+  after a public notice period, and never above a ceiling fixed at deployment;
 - a **public treasury** with no way to move money except two kinds of commitment:
-  **grants** (standing work, such as maintaining contracts) and **programs** (piecework,
-  such as a judge paid per case ruled). Every commitment is announced before money flows,
-  funded in full when made, capped per recipient, and can be ended without taking away
-  what was already earned.
+  **grants** (standing work) and **programs** (piecework). Every commitment is announced
+  before money flows, funded in full when made, capped per recipient, and can be ended
+  without taking away what was already earned;
+- a **ballot meter**, which tells a program how many ballots each judge cast on final
+  decisions of one council.
 
-The tax reaches the treasury through a deduction policy of the
-[Settlement Deductions ERC](https://github.com/unicore-gpu/settlement-deductions), whose
-`ITaxSchedule` interface the tax schedule implements.
+The rules these contracts follow are specified in [SPEC.md](SPEC.md). The whole loop has
+run on Sepolia (see [Sepolia run](#sepolia-run)).
 
-The specification is in [ERC-draft.md](ERC-draft.md). Status: **Draft**, not yet submitted.
+## Use cases
+
+**Paying judges per ballot.** A network settles disputes over task results with a council
+of judges deciding under ERC-8436. A program pays each judge a fixed amount for each ballot
+cast on a final decision, whichever side it took, so that a judge gains nothing by siding
+with the majority. `BallotMeter` checks each ballot against the council's registry and
+counts it once. This is the case the Sepolia pilot runs.
+
+**Standing work.** Work with no unit to count, such as maintaining shared contracts or
+running an indexer or a monitoring service, is paid by a grant: a fixed amount per period
+for a fixed term. Ending a grant stops future periods and leaves earned ones payable.
+
+**Other piecework.** Any work a contract can count can be paid per unit through a program
+with its own meter, for example a verifier paid per task result it checks. Each kind of
+work needs its own meter; only `BallotMeter` exists today. The treasury trusts a meter's
+counts, so a meter must count only what it can check on-chain.
+
+**A tax agents can price in.** The rate in force when a task is created applies to that
+task. A new rate applies only after the notice period, and never above the ceiling, so an
+agent knows the tax before it takes a job.
+
+**Spending rules that hold whoever decides.** Decisions are made by one governor address:
+a single account in the pilot, and in a network typically a contract that executes
+collective decisions. Whoever it is, money leaves the treasury only through announced,
+funded and capped commitments, and the notice period gives others time to object. What
+these rules do not stop is set out in SPEC.md, under Security Considerations.
 
 ## Contents
 
 | Path | What it is |
 |---|---|
+| `SPEC.md` | The rules the tax schedule and the treasury follow |
 | `src/interfaces/IPublicTaxSchedule.sol` | The tax schedule interface (extends `ITaxSchedule`) |
 | `src/interfaces/IPublicTreasury.sol` | The treasury interface |
 | `src/TaxSchedule.sol` | Reference tax schedule: rates per asset, notice, ceiling |
@@ -36,6 +69,9 @@ The specification is in [ERC-draft.md](ERC-draft.md). Status: **Draft**, not yet
 | `src/BallotMeter.sol` | A program meter that pays one unit per ballot cast on a final ERC-8436 collective decision of one policy and consumer, such as a judges' council; anyone can report, each ballot counts once |
 | `src/interfaces/ICollectiveDecisionReads.sol` | The three ERC-8436 registry reads the meter makes |
 | `test/` | Foundry unit, fuzz and invariant tests: every requirement of the specification, the worked examples, odd tokens, recipients that refuse payment, re-entry, two assets, and end-to-end runs in which a settlement deduction policy collects the tax and a program pays a judge per case |
+| `integration/` | Tests against the real ERC-8414 kernel with the deduction hook, the ERC-8436 registries and their adapter |
+| `script/` | The testnet pilot (`Pilot.s.sol`) and its test token (`TestUSD.sol`) |
+| `deployments/` | Addresses of the Sepolia pilot |
 
 ## Build and test
 
@@ -118,8 +154,9 @@ The judges' keys are derived from a public seed (`JUDGE_SEED`). They are for thi
 
 ## Status and warnings
 
-This is a draft standard. The interfaces may change during discussion. The code has not
-been audited; do not use it to hold real funds.
+This is draft code. Its interfaces may change, and so may the draft standards it builds
+on. The code has not been audited; do not use it to hold real funds. The Sepolia pilot uses
+a test token with no value.
 
 ## License
 

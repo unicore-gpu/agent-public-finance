@@ -1,19 +1,12 @@
----
-eip: TBD
-title: Public Treasury and Tax Schedule
-description: A tax schedule with notice and a ceiling, and a treasury that pays out only through announced, funded and capped commitments
-author: Ben (@unicore-gpu)
-discussions-to: TBD
-status: Draft
-type: Standards Track
-category: ERC
-created: 2026-11-09
-requires: 20
----
+# Public Treasury and Tax Schedule: specification
+
+The rules that `TaxSchedule` and `PublicTreasury` follow, written so that another
+implementation can follow them too. This is the specification of an application, not a
+proposed standard.
 
 ## Abstract
 
-This ERC specifies two contracts that let a network fund public work from a tax, under rules that the contracts enforce rather than promise:
+This document specifies two contracts that let a network fund public work from a tax, under rules that the contracts enforce rather than promise:
 
 1. a **tax schedule**: one rate per asset, readable by any settlement contract or deduction policy, that can only change after a public notice period and never above a ceiling fixed at deployment;
 2. a **public treasury** that holds the tax and has no way to move money other than two kinds of commitment: **grants**, a fixed amount per period for a fixed term, and **programs**, a rate per unit of work reported by a named meter contract, within a budget and an end date.
@@ -33,7 +26,7 @@ Treasuries today are mostly a multisig or a governor contract that can execute a
 - work done is paid, even if the decision to pay for it is later reversed;
 - piecework is paid per piece, at a rate known in advance.
 
-This ERC moves those rules into the contracts, where they hold whatever the governor decides. It standardizes the three places where independent parties meet:
+This specification moves those rules into the contracts, where they hold whatever the governor decides. It fixes one interface for each of the three places where independent parties meet:
 
 1. **Settlement reads the rate.** Escrows and deduction policies of any market read one rate per asset at task creation, through one function, and know it cannot change without notice.
 2. **Services report work.** A dispute-resolution contract, a monitoring service or a data feed reports units of work through one function, and is paid by any conforming treasury without an integration per treasury.
@@ -47,7 +40,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ### 1. Terms
 
-- **Asset**: `address(0)` for the chain's native currency, otherwise an [ERC-20](./eip-20.md) token.
+- **Asset**: `address(0)` for the chain's native currency, otherwise an [ERC-20](https://eips.ethereum.org/EIPS/eip-20) token.
 - **Governor**: the one address allowed to propose rates and to make and end commitments. It is fixed at deployment.
 - **Commitment**: a grant or a program. Grants and programs are numbered separately, from 0, in the order they are made.
 - **Grant**: a promise to pay `perPeriod` of an asset to one payee at the end of each of `periods` periods of length `period`.
@@ -61,11 +54,11 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ### 2. Conformance
 
-A tax schedule conforms if it implements section 3 and meets every requirement of section 4. A treasury conforms if it implements section 5 and meets every requirement of section 6. Support for [ERC-165](./eip-165.md) is OPTIONAL.
+A tax schedule conforms if it implements section 3 and meets every requirement of section 4. A treasury conforms if it implements section 5 and meets every requirement of section 6. Support for [ERC-165](https://eips.ethereum.org/EIPS/eip-165) is OPTIONAL.
 
 ### 3. Tax schedule interface
 
-`ITaxSchedule` is the interface that the reference policy of the Settlement Deductions for Task Escrows ERC reads at task creation. It is repeated here so that this document is complete.
+`ITaxSchedule` is the interface that the reference policy of [ERC-8492](https://github.com/ethereum/ERCs/pull/2157) (Settlement Deductions for Task Escrows) reads at task creation. It is repeated here so that this document is complete.
 
 ```solidity
 interface ITaxSchedule {
@@ -198,11 +191,11 @@ interface IPublicTreasury {
 
 **One governor, any process.** The governor is a single address so that any decision process can sit behind it: a collective decision registry's executor, a timelock, a multisig. The treasury does not trust that process; it fixes what the process can do and when.
 
-**Relation to existing work.** A governor contract with a timelock delays and records decisions, but a passed proposal can still make any call, so the rules above stay outside the contract. Streaming and vesting contracts pay one recipient over time once funded; they do not limit what a treasury commits overall or per recipient. [ERC-1620](./eip-1620.md) streams money between two parties, who can change or stop a stream by agreement. [ERC-7794](./eip-7794.md) registers grants and their disbursements as records managed by a grant manager, without holding the money. Here the treasury holds the money and its interface is the only way out.
+**Relation to existing work.** A governor contract with a timelock delays and records decisions, but a passed proposal can still make any call, so the rules above stay outside the contract. Streaming and vesting contracts pay one recipient over time once funded; they do not limit what a treasury commits overall or per recipient. [ERC-1620](https://eips.ethereum.org/EIPS/eip-1620) streams money between two parties, who can change or stop a stream by agreement. [ERC-7794](https://eips.ethereum.org/EIPS/eip-7794) registers grants and their disbursements as records managed by a grant manager, without holding the money. Here the treasury holds the money and its interface is the only way out.
 
 ## Backwards Compatibility
 
-This ERC introduces new contracts. `ITaxSchedule` is the interface that the reference policy of the Settlement Deductions for Task Escrows ERC reads at task creation, so such a policy works with a conforming schedule unchanged. That policy refuses a task whose rate exceeds its own cap on deductions. Deployers SHOULD set `maxRateBps` no higher than the cap of every policy that reads the schedule, and well below it if payees also assign part of their payouts, since the tax is taken first.
+These are new contracts. `ITaxSchedule` is the interface that the reference policy of [ERC-8492](https://github.com/ethereum/ERCs/pull/2157) (Settlement Deductions for Task Escrows) reads at task creation, so such a policy works with a conforming schedule unchanged. That policy refuses a task whose rate exceeds its own cap on deductions. Deployers SHOULD set `maxRateBps` no higher than the cap of every policy that reads the schedule, and well below it if payees also assign part of their payouts, since the tax is taken first.
 
 ## Test Cases
 
@@ -245,4 +238,4 @@ This ERC introduces new contracts. `ITaxSchedule` is the interface that the refe
 
 ## Copyright
 
-Copyright and related rights waived via [CC0](../LICENSE.md).
+Copyright and related rights waived via [CC0](LICENSE).
