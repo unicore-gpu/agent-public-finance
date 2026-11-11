@@ -11,14 +11,15 @@ task payout ──tax──▶ public treasury ──┬─ grant:   fixed amoun
                                        └─ program: rate per unit of work, reported by a meter
 ```
 
-This is an application, not a standard. It is built on three draft standards:
+This is an application, not a standard. It is built on four draft standards:
 
 - [ERC-8492](https://github.com/ethereum/ERCs/pull/2157), Settlement Deductions for Task
   Escrows: withholds the tax from each payout and pays it to the treasury;
 - ERC-8414, Token-Bound Task Tenders: the task escrow;
-- ERC-8436, Agent Collective Decision Framework: the councils whose ballots the meter counts.
+- ERC-8436, Agent Collective Decision Framework: the councils that judge and that govern;
+- ERC-8471, AI Dispute Resolution Framework: the disputes whose judges are paid.
 
-It has three contracts:
+It has four contracts:
 
 - a **tax schedule**: one rate per asset, read when a task is created. A rate changes only
   after a public notice period, and never above a ceiling fixed at deployment;
@@ -27,18 +28,24 @@ It has three contracts:
   before money flows, funded in full when made, capped per recipient, and can be ended
   without taking away what was already earned;
 - a **ballot meter**, which tells a program how many ballots each judge cast on final
-  decisions of one council.
+  decisions of one council;
+- a **council governor**, which lets an ERC-8436 council govern the treasury and the tax
+  schedule: the council votes on one exactly specified action, and a Yes runs that action
+  and nothing else.
 
 The rules these contracts follow are specified in [SPEC.md](SPEC.md). The whole loop has
 run on Sepolia (see [Sepolia run](#sepolia-run)).
 
 ## Use cases
 
-**Paying judges per ballot.** A network settles disputes over task results with a council
-of judges deciding under ERC-8436. A program pays each judge a fixed amount for each ballot
-cast on a final decision, whichever side it took, so that a judge gains nothing by siding
-with the majority. `BallotMeter` checks each ballot against the council's registry and
-counts it once. This is the case the Sepolia pilot runs.
+**Paying judges per ballot.** A network settles disputes with a council of judges deciding
+under ERC-8436: an ERC-8471 dispute, whose judged questions the 8471-8436 bridge files as
+council issues, or an ERC-8414 task judged through the 8436-8414 adapter. A program pays
+each judge a fixed amount for each ballot cast on a final decision, whichever side it took,
+so that a judge gains nothing by siding with the majority. `BallotMeter` checks each ballot
+against the council's registry and counts it once, only for issues of one council filed by
+one contract (the bridge or the adapter). Ballots of appeal rounds count too. The Sepolia
+pilot runs the task case; the integration tests run both.
 
 **Standing work.** Work with no unit to count, such as maintaining shared contracts or
 running an indexer or a monitoring service, is paid by a grant: a fixed amount per period
@@ -53,11 +60,18 @@ counts, so a meter must count only what it can check on-chain.
 task. A new rate applies only after the notice period, and never above the ceiling, so an
 agent knows the tax before it takes a job.
 
-**Spending rules that hold whoever decides.** Decisions are made by one governor address:
-a single account in the pilot, and in a network typically a contract that executes
-collective decisions. Whoever it is, money leaves the treasury only through announced,
-funded and capped commitments, and the notice period gives others time to object. What
-these rules do not stop is set out in SPEC.md, under Security Considerations.
+**Spending decided by a council.** `CouncilGovernor` is the governor of the treasury and
+the tax schedule. A listed proposer files one action, such as opening a program or
+proposing a rate, with its arguments; the council votes on exactly that action, as an
+ERC-8436 issue; anyone then executes a Yes, within a fixed window. The governor builds each
+call from the filed action and never takes a target or call data from a caller. The council
+can also add or remove proposers the same way.
+
+**Spending rules that hold whoever decides.** Whoever holds the governor role (a council
+through `CouncilGovernor`, or a single account as in the pilot), money leaves the treasury
+only through announced, funded and capped commitments, a rate never passes the ceiling, and
+the notice periods give others time to object. What these rules do not stop is set out in
+SPEC.md, under Security Considerations.
 
 ## Contents
 
@@ -70,8 +84,10 @@ these rules do not stop is set out in SPEC.md, under Security Considerations.
 | `src/PublicTreasury.sol` | Reference treasury: grants, programs, notice, full funding, recipient cap |
 | `src/BallotMeter.sol` | A program meter that pays one unit per ballot cast on a final ERC-8436 collective decision of one policy and consumer, such as a judges' council; anyone can report, each ballot counts once |
 | `src/interfaces/ICollectiveDecisionReads.sol` | The three ERC-8436 registry reads the meter makes |
+| `src/CouncilGovernor.sol` | The treasury's and schedule's governor, acting only on final decisions of one ERC-8436 council |
+| `src/interfaces/ICollectiveDecisions.sol` | The ERC-8436 registry calls the governor makes: file, read, log enactments |
 | `test/` | Foundry unit, fuzz and invariant tests: every requirement of the specification, the worked examples, odd tokens, recipients that refuse payment, re-entry, two assets, and end-to-end runs in which a settlement deduction policy collects the tax and a program pays a judge per case |
-| `integration/` | Tests against the real ERC-8414 kernel with the deduction hook, the ERC-8436 registries and their adapter |
+| `integration/` | Tests against the real contracts: ERC-8414 with the deduction hook, ERC-8436, the 8436-8414 adapter, ERC-8471 and its 8436 bridge |
 | `script/` | The testnet pilot (`Pilot.s.sol`) and its test token (`TestUSD.sol`) |
 | `deployments/` | Addresses of the Sepolia pilot |
 
@@ -87,19 +103,27 @@ forge test
 
 ### Integration with the real contracts
 
-`integration/` runs the whole loop on the real contracts: ERC-8414 tasks on the kernel with
-the settlement-deduction hook (`unicore-gpu/task-token-standard`, branch
-`settlement-deductions`) pay tax into the treasury, and an ERC-8436 judges' council
-(`garyyang-finchip/acd-framework`) decides judged tasks through the reference 8436-8414
-adapter; the ballot meter pays each judge per ballot from a treasury program. Both are
-pinned submodules under `lib/`.
+`integration/` runs these contracts with the real ones, pinned as submodules under `lib/`:
+
+- `JudgedTenders.t.sol`: ERC-8414 tasks on the kernel with the settlement-deduction hook
+  (`unicore-gpu/task-token-standard`, branch `settlement-deductions`) pay tax into the
+  treasury, and an ERC-8436 judges' council (`garyyang-finchip/acd-framework`) decides judged
+  tasks through the reference 8436-8414 adapter; the ballot meter pays each judge per ballot.
+- `JudgedDisputes.t.sol`: the ERC-8471 reference fixture (`garyyang-finchip/ai-dispute-resolution`)
+  runs a dispute over a service call to a ruling and a refund; its judged question is
+  decided by a jurors' council through the 8471-8436 bridge, and the meter pays the jurors
+  per ballot, appeal rounds included.
+- `CouncilGovernance.t.sol`: an ERC-8436 council governs the treasury and the tax schedule
+  through `CouncilGovernor`: programs, grants, rates and proposers; rejections, NoDecision,
+  lapsed approvals, failed actions retried, and calls starved of gas.
 
 ```sh
 FOUNDRY_PROFILE=integration forge test
 ```
 
-The profile compiles everything as those repositories do (via-IR, optimizer runs 1) and
-raises the contract size limit for the test EVM only.
+The profile compiles everything with via-IR and optimizer runs 1, as the 8414 and 8436
+repositories do, and raises the contract size limit for the test EVM only. The suites pass
+under the current gas schedule and under EIP-8037 (`--hardfork amsterdam`).
 
 ### Testnet pilot
 
