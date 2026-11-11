@@ -33,8 +33,10 @@ It has four contracts:
   schedule: the council votes on one exactly specified action, and a Yes runs that action
   and nothing else.
 
-The rules these contracts follow are specified in [SPEC.md](SPEC.md). The whole loop has
-run on Sepolia (see [Sepolia run](#sepolia-run)).
+The rules these contracts follow are specified in [SPEC.md](SPEC.md). Two pilots have run
+on Sepolia: the first with one account as governor ([Sepolia run](#sepolia-run)), the
+second with a council as governor and a dispute whose jurors were paid
+([Second Sepolia run](#second-sepolia-run)).
 
 ## Use cases
 
