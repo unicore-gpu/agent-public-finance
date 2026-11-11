@@ -124,7 +124,8 @@ deploy.
 
 #### Sepolia run
 
-Run on 2026-11-11 on Sepolia, which prices storage under EIP-8037. Addresses are in
+Run on 2026-11-11 on Sepolia, which prices storage under EIP-8037, with the contracts of
+commit `27d5a6e`. Addresses are in
 `deployments/pilot-11155111.json`. Every transaction succeeded, using about 149 million gas
 in all.
 
@@ -160,4 +161,6 @@ a test token with no value.
 
 ## License
 
-[CC0 1.0](LICENSE).
+[Apache-2.0](LICENSE), except [SPEC.md](SPEC.md), which is
+[CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) so that anyone can implement
+it. The repositories under `lib/` keep their own licenses; see [NOTICE](NOTICE).

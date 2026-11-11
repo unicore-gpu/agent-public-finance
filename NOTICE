@@ -1,0 +1,17 @@
+Agent Public Finance
+Copyright 2026 UnicoreGPU
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE), except
+SPEC.md, which is dedicated to the public domain under CC0-1.0 so that anyone can implement
+it.
+
+It builds on the following repositories, included as git submodules under lib/ and not
+modified by this project. Each remains under its own license:
+
+  settlement-deductions   (ERC-8492)  CC0-1.0   https://github.com/unicore-gpu/settlement-deductions
+  task-token-standard     (ERC-8414)  CC0-1.0   https://github.com/unicore-gpu/task-token-standard
+                          (branch settlement-deductions: ERC-8414 with the settlement-deduction hook)
+  acd-framework           (ERC-8436)  CC0-1.0   https://github.com/garyyang-finchip/acd-framework
+  forge-std                           MIT or Apache-2.0   https://github.com/foundry-rs/forge-std
+
+The exact commits are recorded in the submodule entries of this repository.
