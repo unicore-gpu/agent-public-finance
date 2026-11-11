@@ -11,3 +11,6 @@
 	path = lib/task-token-standard
 	url = https://github.com/unicore-gpu/task-token-standard
 	branch = settlement-deductions
+[submodule "lib/ai-dispute-resolution"]
+	path = lib/ai-dispute-resolution
+	url = https://github.com/garyyang-finchip/ai-dispute-resolution

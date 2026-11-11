@@ -12,6 +12,7 @@ modified by this project. Each remains under its own license:
   task-token-standard     (ERC-8414)  CC0-1.0   https://github.com/unicore-gpu/task-token-standard
                           (branch settlement-deductions: ERC-8414 with the settlement-deduction hook)
   acd-framework           (ERC-8436)  CC0-1.0   https://github.com/garyyang-finchip/acd-framework
+  ai-dispute-resolution   (ERC-8471)  CC0-1.0   https://github.com/garyyang-finchip/ai-dispute-resolution
   forge-std                           MIT or Apache-2.0   https://github.com/foundry-rs/forge-std
 
 The exact commits are recorded in the submodule entries of this repository.

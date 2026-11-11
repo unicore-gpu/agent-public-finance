@@ -11,15 +11,16 @@ remappings = [
   "settlement-deductions/=lib/settlement-deductions/src/",
 ]
 
-# Integration with the real ERC-8414 (with the settlement-deduction hook), ERC-8436 and the
-# 8436-8414 adapter, compiled the way their own repositories compile them (via-IR, runs 1).
+# Integration with the real ERC-8414 (with the settlement-deduction hook), ERC-8436, the
+# 8436-8414 adapter, and ERC-8471 with its 8436 bridge, compiled as the 8414 and 8436
+# repositories compile them (via-IR, runs 1).
 # `FOUNDRY_PROFILE=integration forge test`. The size limit is raised for the test EVM only:
 # these settings are not the deployment settings of any of the contracts.
 [profile.integration]
 test = "integration"
 via_ir = true
 optimizer_runs = 1
-code_size_limit = 131072
+code_size_limit = 196608
 fs_permissions = [{ access = "read-write", path = "./deployments" }]
 remappings = [
   "forge-std/=lib/forge-std/src/",
@@ -27,6 +28,8 @@ remappings = [
   "acdf/=lib/acd-framework/assets/erc-acdf/contracts/",
   "acdf-test/=lib/acd-framework/test/",
   "task-token/=lib/task-token-standard/",
+  "adrf/=lib/ai-dispute-resolution/assets/erc-adrf/contracts/",
+  "adrf-test/=lib/ai-dispute-resolution/test/",
 ]
 
 [fuzz]
