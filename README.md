@@ -1,5 +1,7 @@
 # Agent Public Finance
 
+**English** | [简体中文](README.zh-CN.md)
+
 Public finance for networks where agents do paid work on-chain. A small tax on each settled
 task funds the work that keeps the network running, such as judging disputes, and the
 contracts, not a promise, limit how that money is spent.
@@ -125,9 +127,8 @@ deploy.
 #### Sepolia run
 
 Run on 2026-11-11 on Sepolia, which prices storage under EIP-8037, with the contracts of
-commit `27d5a6e`. Addresses are in
-`deployments/pilot-11155111.json`. Every transaction succeeded, using about 149 million gas
-in all.
+commit `27d5a6e`. Addresses are in `deployments/pilot-11155111.json`. Every transaction
+succeeded, using about 149 million gas in all.
 
 | Contract | Address |
 |---|---|
