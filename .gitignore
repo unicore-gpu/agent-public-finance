@@ -3,3 +3,4 @@ cache/
 broadcast/
 .env
 .DS_Store
+deployments/pilot-31337.json

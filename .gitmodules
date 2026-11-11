@@ -4,3 +4,10 @@
 [submodule "lib/settlement-deductions"]
 	path = lib/settlement-deductions
 	url = https://github.com/unicore-gpu/settlement-deductions
+[submodule "lib/acd-framework"]
+	path = lib/acd-framework
+	url = https://github.com/garyyang-finchip/acd-framework
+[submodule "lib/task-token-standard"]
+	path = lib/task-token-standard
+	url = https://github.com/unicore-gpu/task-token-standard
+	branch = settlement-deductions
