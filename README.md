@@ -148,6 +148,10 @@ EIP-8037 the local simulation can undercount new storage. The three steps use ab
 million gas under the current schedule and about 149 million under EIP-8037, most of it to
 deploy.
 
+Gas price: pin both fees, for example `--with-gas-price 10000 --priority-gas-price 100` (in
+wei). In the second pilot, forge priced the first six deployments at 1 gwei while the
+network asked for about 70 wei; at 1 gwei the deployments under EIP-8037 cost about 0.2 ETH.
+
 #### Sepolia run
 
 Run on 2026-11-11 on Sepolia, which prices storage under EIP-8037, with the contracts of
@@ -177,6 +181,69 @@ the script's estimate for the claim reached a node behind the chain and reverted
 limits now avoid that.
 
 The judges' keys are derived from a public seed (`JUDGE_SEED`). They are for this pilot only.
+
+### Second pilot: a council governs, the jurors of a dispute are paid
+
+`script/Pilot2.s.sol` runs four steps, separated by the two notice periods and the dispute's
+review window (10 minutes each):
+
+- `deploy`: a treasury and a tax schedule governed by a stewards' council (3 of 5 signed
+  ballots) through `CouncilGovernor`; an ERC-8414 kernel with the deduction hook; an ERC-8471
+  dispute registry with its 8436 bridge and the reference service escrow; a ballot meter for
+  a jurors' council (2 of 3 signed ballots). Both councils are registered on the ERC-8436
+  registry of the first pilot. The stewards decide the first action: a 1% tax rate.
+- `fund`: two tasks pay tax; the stewards decide the second action: a program that pays the
+  jurors 2 tUSD per ballot.
+- `dispute`: the client pays for a service call; the provider delivers and charges; the
+  client disputes the delivery; two of three jurors find that it does not conform; the
+  finding is imported and the dispute decided; the meter pays the two jurors.
+- `close`: the ruling becomes final and the escrow refunds the charge.
+
+```sh
+export FOUNDRY_PROFILE=integration
+forge script script/Pilot2.s.sol --sig "deploy()" --rpc-url $RPC --account <keystore> --broadcast --slow --skip-simulation --with-gas-price 10000 --priority-gas-price 100
+# after the rate notice:      --sig "fund()"
+# after the program notice:   --sig "dispute()"
+# after the review window:    --sig "close()"
+```
+
+The stewards and the jurors only sign. The provider sends two transactions of its own and
+receives 0.001 ETH for them; its key, like theirs, is derived from `JUDGE_SEED` and is for
+the pilot only.
+
+#### Second Sepolia run
+
+Run on 2026-11-11 on Sepolia with the contracts of commit `c2abe8c`. Addresses are in
+`deployments/pilot2-11155111.json`. All 58 transactions succeeded, using about 216 million
+gas.
+
+| Contract | Address |
+|---|---|
+| `CouncilGovernor` | [`0x92a5…603c`](https://sepolia.etherscan.io/address/0x92a506f37945E4682E1d63a33e3b68d1eca9603c) |
+| `PublicTreasury` | [`0xba8F…adaf`](https://sepolia.etherscan.io/address/0xba8Fb1A5b1D8c1B502DE6cb6f7bD5319D289adaf) |
+| `TaxSchedule` | [`0x87eF…b773`](https://sepolia.etherscan.io/address/0x87eFDb25066c268281896cCabE5213810bDfb773) |
+| `DeductingTaskToken` (ERC-8414 with the settlement-deduction hook) | [`0xb606…1640`](https://sepolia.etherscan.io/address/0xb6067A826d26c81E21bD80e2cFaFcC443E081640) |
+| `ADRFDisputeRegistry` (ERC-8471) | [`0x4684…bbEd`](https://sepolia.etherscan.io/address/0x4684E7Ce59196763311ba4C4e41b816F8A7ebbEd) |
+| `ADRFACDFBridge` (8471-8436) | [`0x488E…503f`](https://sepolia.etherscan.io/address/0x488E16befd3D17B969df5BE78f2a8b644245503f) |
+| `ADRFServiceEscrow` | [`0xad10…60Ef`](https://sepolia.etherscan.io/address/0xad10E8760dd8bdd59013fc05b7e56738066960Ef) |
+| `BallotMeter` | [`0x39Cf…4f23`](https://sepolia.etherscan.io/address/0x39Cffe344a9819b2D021E9A1Ff67118F88364f23) |
+| `TestUSD` | [`0xb0b7…03EF`](https://sepolia.etherscan.io/address/0xb0b742c8543A4342f1eC334dA60251497aEe03EF) |
+
+Outcome: the stewards' council set the tax rate
+([`execute`](https://sepolia.etherscan.io/tx/0x717ffc1409b8fefcb39751090f257c162fa59be7b467dd5af85a09d483456e11))
+and, once two tasks of 5,000 tUSD had paid 100 in tax, opened the jurors' program
+([`execute`](https://sepolia.etherscan.io/tx/0xb1283ed792f06b3dae40754e34eb217196344b95c21195bf4b0dcef1bcfb8152)).
+Two jurors signed that the delivery did not conform
+([ballots](https://sepolia.etherscan.io/tx/0x1944cd541e8cdc932682d060467a1996f5b4b662fbd2df5f48bc456854b36be4)),
+the meter paid each of them 2 tUSD
+([first report](https://sepolia.etherscan.io/tx/0x357601263d9cf61ad2c31403d0ddcf3667984d8f1d11dcdb25ed6eed8e579625)),
+and the third juror, who did not vote, holds nothing. The treasury holds 96 and the program
+has 26 of its 30 left. The dispute was sustained and the escrow refunded the 0.0001 ETH
+charge ([`enact`](https://sepolia.etherscan.io/tx/0xd4d664e24639123446cbd246948b3c9ca339655ff07332b7bbfa92becd687d26)).
+
+The deployment ran in two parts: forge stopped after six transactions priced at 1 gwei, when
+the wallet could no longer cover the next deployment at that price, and `--resume` sent the
+other nineteen with pinned fees.
 
 ## Status and warnings
 

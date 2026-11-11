@@ -100,6 +100,8 @@ forge script script/Pilot.s.sol --sig "deploy()" --rpc-url $RPC --account <keyst
 
 关于 gas 上限：部署之后的每一笔调用都带固定的 gas 上限，原因有两个。一是付款时必须给扣款策略留出它的全部预算，按实际用量估算出来的上限不够；二是公共 RPC 会把请求分到多个节点，某个节点可能还没看到上一笔交易所在的区块，按旧状态估算就会出错。部署交易的上限用 `--skip-simulation` 交给节点估算，因为在 EIP-8037 下，本地模拟可能少算新建存储的费用。三步合计，按现行 gas 规则约 2,400 万 gas，按 EIP-8037 约 1.49 亿 gas，大部分花在部署上。
 
+关于 gas 价格：两项费用都要固定，例如 `--with-gas-price 10000 --priority-gas-price 100`（单位 wei）。第二轮试点中，网络价格约 70 wei，forge 却给前六笔部署交易定了 1 gwei 的价格；按 1 gwei 计算，EIP-8037 下的部署要花约 0.2 ETH。
+
 #### Sepolia 运行结果
 
 2026-11-11 在 Sepolia 上运行。Sepolia 已经按 EIP-8037 对存储计费。部署的是 commit `27d5a6e` 的合约，地址记录在 `deployments/pilot-11155111.json`。所有交易都成功，合计约 1.49 亿 gas。
@@ -120,6 +122,45 @@ forge script script/Pilot.s.sol --sig "deploy()" --rpc-url $RPC --account <keyst
 `fund` 的最后两笔调用（第二次领税和 `createProgram`）是用 `cast` 手动发的：脚本为领税估算 gas 时，请求落到了一个落后于链的节点上，结果回滚。现在每笔调用都带固定上限，避免了这个问题。
 
 法官的私钥由一个公开的种子（`JUDGE_SEED`）生成，只用于这次试点。
+
+### 第二轮试点：委员会治理，纠纷陪审员按票付酬
+
+`script/Pilot2.s.sol` 分四步运行，中间隔着两个公示期和纠纷的复议期（各 10 分钟）：
+
+- `deploy`：部署金库和税率表，由管理员委员会（5 人中 3 人签名同意）通过 `CouncilGovernor` 管理；部署带扣款钩子的 ERC-8414 内核；部署 ERC-8471 纠纷登记合约、它的 8436 桥接合约和参考服务托管合约；为陪审员委员会（3 人中 2 人签名同意）部署计票器。两个委员会都注册在第一轮试点的 ERC-8436 注册合约上。管理员委员会作出第一个决定：税率 1%。
+- `fund`：两个任务交税；管理员委员会作出第二个决定：开设项目，按每票 2 tUSD 给陪审员付酬。
+- `dispute`：客户付费调用一项服务；服务方交付并扣款；客户对交付提出纠纷；3 位陪审员中的 2 位认定交付不合格；结论导入后纠纷作出决定；计票器给这两位陪审员付酬。
+- `close`：裁决成为最终裁决，托管合约退还服务费。
+
+```sh
+export FOUNDRY_PROFILE=integration
+forge script script/Pilot2.s.sol --sig "deploy()" --rpc-url $RPC --account <keystore> --broadcast --slow --skip-simulation --with-gas-price 10000 --priority-gas-price 100
+# 税率公示期过后：  --sig "fund()"
+# 项目公示期过后：  --sig "dispute()"
+# 复议期过后：      --sig "close()"
+```
+
+管理员和陪审员只负责签名。服务方要自己发两笔交易，为此会收到 0.001 ETH；它的私钥和管理员、陪审员的一样，由 `JUDGE_SEED` 生成，只用于试点。
+
+#### 第二轮 Sepolia 运行结果
+
+2026-11-11 在 Sepolia 上运行，部署的是 commit `c2abe8c` 的合约，地址记录在 `deployments/pilot2-11155111.json`。58 笔交易全部成功，合计约 2.16 亿 gas。
+
+| 合约 | 地址 |
+|---|---|
+| `CouncilGovernor` | [`0x92a5…603c`](https://sepolia.etherscan.io/address/0x92a506f37945E4682E1d63a33e3b68d1eca9603c) |
+| `PublicTreasury` | [`0xba8F…adaf`](https://sepolia.etherscan.io/address/0xba8Fb1A5b1D8c1B502DE6cb6f7bD5319D289adaf) |
+| `TaxSchedule` | [`0x87eF…b773`](https://sepolia.etherscan.io/address/0x87eFDb25066c268281896cCabE5213810bDfb773) |
+| `DeductingTaskToken`（带结算扣款钩子的 ERC-8414） | [`0xb606…1640`](https://sepolia.etherscan.io/address/0xb6067A826d26c81E21bD80e2cFaFcC443E081640) |
+| `ADRFDisputeRegistry`（ERC-8471） | [`0x4684…bbEd`](https://sepolia.etherscan.io/address/0x4684E7Ce59196763311ba4C4e41b816F8A7ebbEd) |
+| `ADRFACDFBridge`（8471-8436） | [`0x488E…503f`](https://sepolia.etherscan.io/address/0x488E16befd3D17B969df5BE78f2a8b644245503f) |
+| `ADRFServiceEscrow` | [`0xad10…60Ef`](https://sepolia.etherscan.io/address/0xad10E8760dd8bdd59013fc05b7e56738066960Ef) |
+| `BallotMeter` | [`0x39Cf…4f23`](https://sepolia.etherscan.io/address/0x39Cffe344a9819b2D021E9A1Ff67118F88364f23) |
+| `TestUSD` | [`0xb0b7…03EF`](https://sepolia.etherscan.io/address/0xb0b742c8543A4342f1eC334dA60251497aEe03EF) |
+
+结果：管理员委员会设定了税率（[`execute` 交易](https://sepolia.etherscan.io/tx/0x717ffc1409b8fefcb39751090f257c162fa59be7b467dd5af85a09d483456e11)）；两个 5,000 tUSD 的任务交了 100 tUSD 的税之后，委员会开设了陪审员计酬项目（[`execute` 交易](https://sepolia.etherscan.io/tx/0xb1283ed792f06b3dae40754e34eb217196344b95c21195bf4b0dcef1bcfb8152)）。两位陪审员签名认定交付不合格（[投票交易](https://sepolia.etherscan.io/tx/0x1944cd541e8cdc932682d060467a1996f5b4b662fbd2df5f48bc456854b36be4)），计票器给他们各付了 2 tUSD（[第一笔上报](https://sepolia.etherscan.io/tx/0x357601263d9cf61ad2c31403d0ddcf3667984d8f1d11dcdb25ed6eed8e579625)），没投票的第三位陪审员什么也没拿到。金库余额 96，项目预算 30 还剩 26。纠纷成立，托管合约退还了 0.0001 ETH 的服务费（[`enact` 交易](https://sepolia.etherscan.io/tx/0xd4d664e24639123446cbd246948b3c9ca339655ff07332b7bbfa92becd687d26)）。
+
+部署分两次完成：forge 以 1 gwei 的价格发了六笔交易后，钱包按这个价格付不起下一笔部署，于是停下；之后用 `--resume` 以固定的费用发出了其余十九笔。
 
 ## 状态和警告
 

@@ -4,3 +4,4 @@ broadcast/
 .env
 .DS_Store
 deployments/pilot-31337.json
+deployments/pilot2-31337.json
